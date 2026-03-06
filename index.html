@@ -44,7 +44,6 @@
             border: none;
             border-radius: 5px;
             color: white;
-            /* アニメーションを滑らかにする設定 */
             transition: all 0.15s ease; 
         }
         #countBtn {
@@ -60,11 +59,9 @@
         #resetBtn:hover {
             background-color: #a71d2a;
         }
-        
-        /* --- 演出用のCSSクラス --- */
         #countBtn.active-effect {
-            transform: scale(0.95); /* ボタンを5%縮小 */
-            background-color: #28a745; /* 緑色に変更 */
+            transform: scale(0.95);
+            background-color: #28a745;
         }
     </style>
 </head>
@@ -76,7 +73,7 @@
         累計単語数: <span id="totalWords">0</span> words
     </div>
 
-    <textarea id="inputText" placeholder="ここに英文をペーストしてください..."></textarea>
+    <textarea id="inputText" placeholder="ここに英文をペーストしてください...（Enterキーでカウント）"></textarea>
 
     <div class="button-group">
         <button id="countBtn">カウントして追加</button>
@@ -84,39 +81,42 @@
     </div>
 
     <script>
-        let cumulativeCount = 0;
-
         const totalWordsDisplay = document.getElementById('totalWords');
         const inputTextArea = document.getElementById('inputText');
         const countButton = document.getElementById('countBtn');
         const resetButton = document.getElementById('resetBtn');
 
+        // ブラウザのセッションストレージから前回のデータを取得（なければ0）
+        let cumulativeCount = parseInt(sessionStorage.getItem('cumulativeWordCount')) || 0;
+        
+        // ページ読み込み時に保存されていた数値を表示
+        totalWordsDisplay.textContent = cumulativeCount;
+
         function countWords(text) {
             const trimmedText = text.trim();
-            if (trimmedText === '') {
-                return 0;
-            }
-            const wordsArray = trimmedText.split(/\s+/);
-            return wordsArray.length;
+            if (trimmedText === '') return 0;
+            return trimmedText.split(/\s+/).length;
         }
 
         countButton.addEventListener('click', () => {
             const currentText = inputTextArea.value;
             const newWordsCount = countWords(currentText);
             
-            // 空欄の場合は処理を中断（演出も出さない）
             if (newWordsCount === 0) return;
 
+            // 累計に加算し、表示を更新
             cumulativeCount += newWordsCount;
             totalWordsDisplay.textContent = cumulativeCount;
+            
+            // セッションストレージに最新の数値を保存
+            sessionStorage.setItem('cumulativeWordCount', cumulativeCount);
+            
             inputTextArea.value = '';
 
-            // --- 演出の処理 ---
-            // CSSクラスを付与して見た目を変更
+            // 演出の処理
             countButton.classList.add('active-effect');
             countButton.textContent = '+ ' + newWordsCount + ' 追加しました';
 
-            // 300ミリ秒（0.3秒）後に元の状態に戻す
             setTimeout(() => {
                 countButton.classList.remove('active-effect');
                 countButton.textContent = 'カウントして追加';
@@ -124,11 +124,23 @@
         });
 
         resetButton.addEventListener('click', () => {
-            // 確認ダイアログを表示し、誤操作を防止
             if (confirm('累計単語数をリセットしてもよろしいですか？')) {
                 cumulativeCount = 0;
                 totalWordsDisplay.textContent = cumulativeCount;
+                
+                // セッションストレージのデータも削除
+                sessionStorage.removeItem('cumulativeWordCount');
+                
                 inputTextArea.value = '';
+            }
+        });
+
+        // エンターキーでのカウント実行処理
+        inputTextArea.addEventListener('keydown', (e) => {
+            // Enterキーが押され、かつShiftキーが押されていない場合
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault(); // テキストエリア内での改行を防ぐ
+                countButton.click(); // カウントボタンのクリック処理を強制実行
             }
         });
     </script>
